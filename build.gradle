@@ -1,0 +1,39 @@
+buildscript {
+	ext {
+		springBootVersion = '2.1.1.RELEASE'
+		junitVersion = '5.3.2'
+	}
+	repositories {
+		mavenCentral()
+	}
+	dependencies {
+		classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
+	}
+}
+
+apply plugin: 'java'
+apply plugin: 'eclipse'
+apply plugin: 'org.springframework.boot'
+apply plugin: 'io.spring.dependency-management'
+
+group = 'de.hilbert'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = 1.8
+
+repositories {
+	mavenCentral()
+}
+
+
+dependencies {
+	implementation('org.springframework.boot:spring-boot-starter-web')
+	implementation('org.jsoup:jsoup:1.8.3')
+	
+	
+	testImplementation("org.springframework.boot:spring-boot-starter-test")
+	testImplementation("org.junit.jupiter:junit-jupiter-params:$junitVersion")
+	testImplementation("org.junit.jupiter:junit-jupiter-api:$junitVersion")
+
+	testRuntimeOnly("org.junit.vintage:junit-vintage-engine:$junitVersion")
+	testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:$junitVersion")
+}
