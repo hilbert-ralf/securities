@@ -6,6 +6,8 @@ import de.hilbert.securities.models.DataTransferObject;
 import de.hilbert.securities.models.Error;
 import de.hilbert.securities.models.Security;
 import de.hilbert.securities.services.SecurityEnrichmentService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +22,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class SecuritiesController {
 
+    private Logger log = LoggerFactory.getLogger(SecuritiesController.class);
+
     private SecurityEnrichmentService securityEnrichmentService;
 
     @Autowired
@@ -33,9 +37,11 @@ public class SecuritiesController {
             Security security = securityEnrichmentService.enrich(new Security(isin));
             return ResponseEntity.ok(security);
         } catch (IORuntimeException e) {
-            return new ResponseEntity<>(new Error(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+            log.warn(e.getMessage(), e);
+            return new ResponseEntity<>(new Error(HttpStatus.INTERNAL_SERVER_ERROR.value(), e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         } catch (NotYetImplementedException e) {
-            return new ResponseEntity<>(new Error(e.getMessage()), HttpStatus.NOT_IMPLEMENTED);
+            log.warn(e.getMessage(), e);
+            return new ResponseEntity<>(new Error(HttpStatus.NOT_IMPLEMENTED.value(), e.getMessage()), HttpStatus.NOT_IMPLEMENTED);
         }
     }
 }

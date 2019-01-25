@@ -6,17 +6,19 @@ package de.hilbert.securities.models;
  */
 public class Error implements DataTransferObject {
 
-    private String message;
+    private int errorCode;
+    private String errorMessage;
 
-    public Error(String message) {
-        this.message = message;
+    public Error(int errorCode, String errorMessage) {
+        this.errorCode = errorCode;
+        this.errorMessage = errorMessage;
     }
 
-    public String getMessage() {
-        return message;
+    public int getErrorCode() {
+        return errorCode;
     }
 
-    public void setMessage(String message) {
-        this.message = message;
+    public String getErrorMessage() {
+        return errorMessage;
     }
 }

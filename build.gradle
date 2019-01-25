@@ -26,14 +26,13 @@ repositories {
 
 
 dependencies {
-	implementation('org.springframework.boot:spring-boot-starter-web')
-	implementation('org.jsoup:jsoup:1.8.3')
-	
+	implementation("org.springframework.boot:spring-boot-starter-web:${springBootVersion}")
+	implementation("org.springframework.boot:spring-boot-starter-security:${springBootVersion}")
+	implementation("org.jsoup:jsoup:1.8.3")
 	
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	testImplementation("org.junit.jupiter:junit-jupiter-params:$junitVersion")
 	testImplementation("org.junit.jupiter:junit-jupiter-api:$junitVersion")
-
 	testRuntimeOnly("org.junit.vintage:junit-vintage-engine:$junitVersion")
 	testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:$junitVersion")
 }
