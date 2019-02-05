@@ -31,7 +31,7 @@ public class SecuritiesController {
         this.securityEnrichmentService = securityEnrichmentService;
     }
 
-    @RequestMapping("/isin/{isin}")
+    @RequestMapping("/api/v1/isin/{isin}")
     public ResponseEntity<DataTransferObject> greeting(@PathVariable("isin") String isin) {
         try {
             Security security = securityEnrichmentService.enrich(new Security(isin));
