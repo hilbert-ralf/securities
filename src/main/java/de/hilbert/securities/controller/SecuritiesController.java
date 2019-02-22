@@ -32,7 +32,7 @@ public class SecuritiesController {
     }
 
     @RequestMapping("/api/v1/isin/{isin}")
-    public ResponseEntity<DataTransferObject> greeting(@PathVariable("isin") String isin) {
+    public ResponseEntity<DataTransferObject> security(@PathVariable("isin") String isin) {
         try {
             Security security = securityEnrichmentService.enrich(new Security(isin));
             return ResponseEntity.ok(security);

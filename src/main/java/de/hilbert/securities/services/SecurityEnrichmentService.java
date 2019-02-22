@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -26,11 +27,6 @@ public class SecurityEnrichmentService {
     private Logger log = LoggerFactory.getLogger(SecurityEnrichmentService.class);
 
     public Security enrich(Security security) {
-
-        System.setProperty("http.proxyHost", "127.0.0.1");
-        System.setProperty("http.proxyPort", "3128");
-        System.setProperty("https.proxyHost", "127.0.0.1");
-        System.setProperty("https.proxyPort", "3128");
 
         Document document = null;
 
@@ -48,30 +44,32 @@ public class SecurityEnrichmentService {
 
         security.setPrice(floatOf(document.select("span[itemprop=price]").text()));
 
-        int earningsRow = 0;
-        //"Ergebnis je Aktie (verwässert)" not in the same row every time, we need to find the row
+        Map<String, Map<Integer, Float>> map = new HashMap<>();
+
         for (int i = 1; i < 15; i++) {
-            String earningsLine = document.select(earningsTableQuery(i, 1)).text();
-            if (earningsLine.startsWith("Ergebnis je Aktie (verwässert)")) {
-                earningsRow = i;
-                break;
+            String titleOfLine = document.select(tableQuery(i, 1)).text();
+            if (titleOfLine.isEmpty()) {
+                // nothing to parse within this line
+                continue;
             }
-        }
 
-        if (earningsRow > 0) {
-            Map<Integer, Float> earningsPerYear = new LinkedHashMap<>();
-            for (int i = 2; i < 8; i++) {
-                String earning = document.select(earningsTableQuery(earningsRow, i)).text();
-                if (!earning.equals("-  ")) {
-                    String year = document.select(earningsTableQuery(1, i)).text();
-                    earningsPerYear.put(Integer.valueOf(year), floatOf(earning));
+            Map<Integer, Float> yearValueMap = new LinkedHashMap<>();
+            for (int j = 2; j < 8; j++) {
+                String cellOfTable = document.select(tableQuery(i, j)).text();
+                if (cellOfTable.isEmpty() || cellOfTable.equals("-  ")) {
+                    // table cell empty
+                    continue;
                 }
-            }
-            security.setEarningsPerStockAndYearAfterTax(earningsPerYear);
 
-            security.setGrahamPER(PriceEarningsRatio.calculateGrahamPER(security.getEarningsPerStockAndYearAfterTax(), security.getPrice()));
+                String year = document.select(tableQuery(1, j)).text();
+                yearValueMap.put(Integer.valueOf(year), floatOf(cellOfTable));
+
+            }
+            map.put(titleOfLine, yearValueMap);
         }
 
+        security.setEarningsPerStockAndYearAfterTax(map.get("Ergebnis je Aktie (verwässert)"));
+        security.setGrahamPER(PriceEarningsRatio.calculateGrahamPER(security.getEarningsPerStockAndYearAfterTax(), security.getPrice()));
 
         return security;
     }
@@ -88,7 +86,7 @@ public class SecurityEnrichmentService {
         return Float.valueOf(string.replaceAll("\\.", "").replace(",", "."));
     }
 
-    private String earningsTableQuery(int row, int column) {
+    private String tableQuery(int row, int column) {
         String earningsTableQuery = "#pageFundamental > div.tabelleUndDiagramm.aktie.new.abstand > div.column.twothirds.table > table > tbody > tr:nth-child({row}) > td:nth-child({column})";
         return earningsTableQuery.replaceAll("\\{row\\}", String.valueOf(row)).replaceAll("\\{column\\}", String.valueOf(column));
     }
