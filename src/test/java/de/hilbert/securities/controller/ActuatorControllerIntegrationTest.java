@@ -16,37 +16,33 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /**
  * @author Ralf Hilbert
- * @since 18.01.2019
+ * @since 22.02.2019
  */
 @RunWith(SpringRunner.class)
 @SpringBootTest
 @AutoConfigureMockMvc
-public class SecuritiesControllerIntegrationTest {
+public class ActuatorControllerIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
 
     @Test
-    @WithMockUser(roles = "GUESTS")
-    public void testStockRequest() throws Exception {
-        mockMvc.perform(get("/api/v1/isin/DE0005552004"))
-                .andExpect(status().isOk())
-                .andExpect(content().string(CoreMatchers.containsString("earningsPerStockAndYearAfterTax")))
-                .andExpect(content().string(CoreMatchers.containsString("grahamPER")))
-                .andExpect(content().string(CoreMatchers.containsString("DE0005552004")));
-    }
-
-    @Test
-    @WithMockUser(roles = "GUESTS")
-    public void testETFRequest() throws Exception {
-        mockMvc.perform(get("/api/v1/isin/US4642863926"))
-                .andExpect(status().is(501))
-                .andExpect(content().string(CoreMatchers.containsString("Securities of this type are not yet supported")));
-    }
-
-    @Test
-    public void testRequestForMissingAuth() throws Exception {
-        mockMvc.perform(get("/api/v1/isin/anyIsin"))
+    public void testMetricsRequestForMissingAuth() throws Exception {
+        mockMvc.perform(get("/actuator/metrics"))
                 .andExpect(status().is(401));
+    }
+
+    @Test
+    @WithMockUser(roles = "GUESTS")
+    public void testMetricsRequestForWrongAuth() throws Exception {
+        mockMvc.perform(get("/actuator/metrics"))
+                .andExpect(status().is(403));
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMINS")
+    public void testMetricsRequestForCorrectAuth() throws Exception {
+        mockMvc.perform(get("/actuator/metrics"))
+                .andExpect(status().is(200));
     }
 }

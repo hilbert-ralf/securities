@@ -27,10 +27,10 @@ public class SecurityEnrichmentService {
 
     public Security enrich(Security security) {
 
-//        System.setProperty("http.proxyHost", "127.0.0.1");
-//        System.setProperty("http.proxyPort", "3128");
-//        System.setProperty("https.proxyHost", "127.0.0.1");
-//        System.setProperty("https.proxyPort", "3128");
+        System.setProperty("http.proxyHost", "127.0.0.1");
+        System.setProperty("http.proxyPort", "3128");
+        System.setProperty("https.proxyHost", "127.0.0.1");
+        System.setProperty("https.proxyPort", "3128");
 
         Document document = null;
 
