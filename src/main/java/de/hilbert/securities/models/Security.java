@@ -13,6 +13,16 @@ public class Security implements DataTransferObject {
     private Map<Integer, Float> earningsPerStockAndYearAfterTax;
     private float grahamPER;
 
+    public Map<String, Map<Integer, Float>> getRawData() {
+        return rawData;
+    }
+
+    public void setRawData(Map<String, Map<Integer, Float>> rawData) {
+        this.rawData = rawData;
+    }
+
+    private Map<String, Map<Integer, Float>> rawData;
+
     public Security(String ISIN) {
         this.ISIN = ISIN;
     }

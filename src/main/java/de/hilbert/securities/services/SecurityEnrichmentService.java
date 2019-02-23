@@ -46,8 +46,22 @@ public class SecurityEnrichmentService {
 
         Map<String, Map<Integer, Float>> map = new HashMap<>();
 
-        for (int i = 1; i < 15; i++) {
-            String titleOfLine = document.select(tableQuery(i, 1)).text();
+        parseTable(document, map, "#pageFundamental > div.tabelleUndDiagramm.aktie.new.abstand > div.column.twothirds.table > table > tbody > tr:nth-child({row}) > td:nth-child({column})");
+        parseTable(document, map, "#pageFundamental > div.tabelleUndDiagramm.guv.new.abstand > div.column.twothirds.table > table > tbody > tr:nth-child({row}) > td:nth-child({column})");
+        parseTable(document, map, "#pageFundamental > div.tabelleUndDiagramm.personal.new.abstand > div.column.twothirds.table > table > tbody > tr:nth-child({row}) > td:nth-child({column})");
+        parseTable(document, map, "#pageFundamental > div.tabelleUndDiagramm.bewertung.new.abstand > div.column.twothirds.table > table > tbody > tr:nth-child({row}) > td:nth-child({column})");
+
+        security.setRawData(map);
+
+        security.setEarningsPerStockAndYearAfterTax(map.get("Ergebnis je Aktie (verwässert)"));
+        security.setGrahamPER(PriceEarningsRatio.calculateGrahamPER(security.getEarningsPerStockAndYearAfterTax(), security.getPrice()));
+
+        return security;
+    }
+
+    private void parseTable(Document document, Map<String, Map<Integer, Float>> map, String tableSelector) {
+        for (int i = 1; i < 20; i++) {
+            String titleOfLine = document.select(tableQuery(i, 1, tableSelector)).text();
             if (titleOfLine.isEmpty()) {
                 // nothing to parse within this line
                 continue;
@@ -55,23 +69,18 @@ public class SecurityEnrichmentService {
 
             Map<Integer, Float> yearValueMap = new LinkedHashMap<>();
             for (int j = 2; j < 8; j++) {
-                String cellOfTable = document.select(tableQuery(i, j)).text();
-                if (cellOfTable.isEmpty() || cellOfTable.equals("-  ")) {
-                    // table cell empty
+                String cellOfTable = document.select(tableQuery(i, j, tableSelector)).text();
+                if (cellOfTable.isEmpty() || cellOfTable.equals(" ") || cellOfTable.equals("-  ")) {
+                    // not parsable cell of table table cell
                     continue;
                 }
 
-                String year = document.select(tableQuery(1, j)).text();
+                String year = document.select(tableQuery(1, j, tableSelector)).text();
                 yearValueMap.put(Integer.valueOf(year), floatOf(cellOfTable));
 
             }
             map.put(titleOfLine, yearValueMap);
         }
-
-        security.setEarningsPerStockAndYearAfterTax(map.get("Ergebnis je Aktie (verwässert)"));
-        security.setGrahamPER(PriceEarningsRatio.calculateGrahamPER(security.getEarningsPerStockAndYearAfterTax(), security.getPrice()));
-
-        return security;
     }
 
     private void validateDocument(Document document) {
@@ -86,8 +95,7 @@ public class SecurityEnrichmentService {
         return Float.valueOf(string.replaceAll("\\.", "").replace(",", "."));
     }
 
-    private String tableQuery(int row, int column) {
-        String earningsTableQuery = "#pageFundamental > div.tabelleUndDiagramm.aktie.new.abstand > div.column.twothirds.table > table > tbody > tr:nth-child({row}) > td:nth-child({column})";
-        return earningsTableQuery.replaceAll("\\{row\\}", String.valueOf(row)).replaceAll("\\{column\\}", String.valueOf(column));
+    private String tableQuery(int row, int column, String selector) {
+        return selector.replaceAll("\\{row\\}", String.valueOf(row)).replaceAll("\\{column\\}", String.valueOf(column));
     }
 }

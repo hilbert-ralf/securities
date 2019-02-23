@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
  * @since 22.02.2019
  */
 @Component
-@ConditionalOnProperty(name = "behind.proxy", havingValue = "true")
+@ConditionalOnProperty(name = "server.behind.proxy", havingValue = "true")
 public class ProxyConfig {
 
     public ProxyConfig() {
