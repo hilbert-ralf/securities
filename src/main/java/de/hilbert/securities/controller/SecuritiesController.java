@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.io.IOException;
+
 /**
  * @author Ralf Hilbert
  * @since 20.12.2018
@@ -36,7 +38,7 @@ public class SecuritiesController {
         try {
             Security security = securityEnrichmentService.enrich(new Security(isin));
             return ResponseEntity.ok(security);
-        } catch (IORuntimeException e) {
+        } catch (IORuntimeException | IOException e) {
             log.warn(e.getMessage(), e);
             return new ResponseEntity<>(new Error(HttpStatus.INTERNAL_SERVER_ERROR.value(), e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         } catch (NotYetImplementedException e) {

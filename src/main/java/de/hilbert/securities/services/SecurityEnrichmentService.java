@@ -15,6 +15,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * @author Ralf Hilbert
@@ -26,40 +27,58 @@ public class SecurityEnrichmentService {
     private static final String URL_ARIVA = "https://www.ariva.de/{isin}/bilanz-guv";
     private Logger log = LoggerFactory.getLogger(SecurityEnrichmentService.class);
 
-    public Security enrich(Security security) {
+    public Security enrich(Security security) throws IOException {
 
         Document document = null;
 
-        try {
-            String urlToScrape = URL_ARIVA.replaceAll("\\{isin\\}", security.getISIN());
-            long start = System.currentTimeMillis();
-            document = Jsoup.connect(urlToScrape).get();
-            long end = System.currentTimeMillis();
-            log.info("needed " + (end - start) + " ms to scrape " + document.html().getBytes(StandardCharsets.UTF_8).length / 1024 + " kb from " + urlToScrape);
-        } catch (IOException e) {
-            log.error(e.getMessage(), e);
-        }
+        String urlToScrape = URL_ARIVA.replaceAll("\\{isin\\}", security.getISIN());
+
+        long start = System.currentTimeMillis();
+        document = Jsoup.connect(urlToScrape).get();
+        long end = System.currentTimeMillis();
+        // TODO: 01.03.2019 this is no value log
+        log.info("needed " + (end - start) + " ms to scrape " + document.html().getBytes(StandardCharsets.UTF_8).length / 1024 + " kb from " + urlToScrape);
+
 
         validateDocument(document);
 
         security.setPrice(floatOf(document.select("span[itemprop=price]").text()));
 
-        Map<String, Map<Integer, Float>> map = new HashMap<>();
+        Map<String, Map<Integer, Float>> rawData = parseFundamentalData(document);
 
-        parseTable(document, map, "#pageFundamental > div.tabelleUndDiagramm.aktie.new.abstand > div.column.twothirds.table > table > tbody > tr:nth-child({row}) > td:nth-child({column})");
-        parseTable(document, map, "#pageFundamental > div.tabelleUndDiagramm.guv.new.abstand > div.column.twothirds.table > table > tbody > tr:nth-child({row}) > td:nth-child({column})");
-        parseTable(document, map, "#pageFundamental > div.tabelleUndDiagramm.personal.new.abstand > div.column.twothirds.table > table > tbody > tr:nth-child({row}) > td:nth-child({column})");
-        parseTable(document, map, "#pageFundamental > div.tabelleUndDiagramm.bewertung.new.abstand > div.column.twothirds.table > table > tbody > tr:nth-child({row}) > td:nth-child({column})");
+        Map<String, Map<Integer, Float>> rawDataHisoty1 = parseFundamentalData(Jsoup.connect(urlToScrape + "?page=6").get());
+        Map<String, Map<Integer, Float>> rawDataHisoty2 = parseFundamentalData(Jsoup.connect(urlToScrape + "?page=12").get());
+        Map<String, Map<Integer, Float>> rawDataHisoty3 = parseFundamentalData(Jsoup.connect(urlToScrape + "?page=18").get());
 
-        security.setRawData(map);
+        rawDataHisoty1.forEach((key, integerFloatMap) -> rawData.merge(key, integerFloatMap, this::mergeInternalMap));
+        rawDataHisoty2.forEach((key, integerFloatMap) -> rawData.merge(key, integerFloatMap, this::mergeInternalMap));
+        rawDataHisoty3.forEach((key, integerFloatMap) -> rawData.merge(key, integerFloatMap, this::mergeInternalMap));
 
-        security.setEarningsPerStockAndYearAfterTax(map.get("Ergebnis je Aktie (verwässert)"));
+        security.setRawData(rawData);
+
+        security.setEarningsPerStockAndYearAfterTax(rawData.get("Ergebnis je Aktie (verwässert)"));
         security.setGrahamPER(PriceEarningsRatio.calculateGrahamPER(security.getEarningsPerStockAndYearAfterTax(), security.getPrice()));
 
         return security;
     }
 
-    private void parseTable(Document document, Map<String, Map<Integer, Float>> map, String tableSelector) {
+    private Map<Integer, Float> mergeInternalMap(Map<Integer, Float> integerFloatMap1, Map<Integer, Float> integerFloatMap2) {
+        Map<Integer, Float> mergedMap = new TreeMap<>(integerFloatMap1);
+        integerFloatMap2.forEach((integer, aFloat) -> mergedMap.merge(integer, aFloat, (aFloat1, aFloat2) -> aFloat1));
+        return mergedMap;
+    }
+
+    private Map<String, Map<Integer, Float>> parseFundamentalData(Document document) {
+        Map<String, Map<Integer, Float>> map = new HashMap<>();
+
+        fillMapWithTableContent(document, map, "#pageFundamental > div.tabelleUndDiagramm.aktie.new.abstand > div.column.twothirds.table > table > tbody > tr:nth-child({row}) > td:nth-child({column})");
+        fillMapWithTableContent(document, map, "#pageFundamental > div.tabelleUndDiagramm.guv.new.abstand > div.column.twothirds.table > table > tbody > tr:nth-child({row}) > td:nth-child({column})");
+        fillMapWithTableContent(document, map, "#pageFundamental > div.tabelleUndDiagramm.personal.new.abstand > div.column.twothirds.table > table > tbody > tr:nth-child({row}) > td:nth-child({column})");
+        fillMapWithTableContent(document, map, "#pageFundamental > div.tabelleUndDiagramm.bewertung.new.abstand > div.column.twothirds.table > table > tbody > tr:nth-child({row}) > td:nth-child({column})");
+        return map;
+    }
+
+    private void fillMapWithTableContent(Document document, Map<String, Map<Integer, Float>> map, String tableSelector) {
         for (int i = 1; i < 20; i++) {
             String titleOfLine = document.select(tableQuery(i, 1, tableSelector)).text();
             if (titleOfLine.isEmpty()) {
@@ -67,7 +86,7 @@ public class SecurityEnrichmentService {
                 continue;
             }
 
-            Map<Integer, Float> yearValueMap = new LinkedHashMap<>();
+            Map<Integer, Float> yearValueMap = new TreeMap<>();
             for (int j = 2; j < 8; j++) {
                 String cellOfTable = document.select(tableQuery(i, j, tableSelector)).text();
                 if (cellOfTable.isEmpty() || cellOfTable.equals(" ") || cellOfTable.equals("-  ")) {
