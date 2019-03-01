@@ -1,0 +1,12 @@
+[Unit]
+Description = Java Service
+After network.target = securities.service
+
+[Service]
+Type = forking
+ExecStart = /home/pi/repos/securities/src/main/resources/service.sh start
+ExecStop = /home/pi/repos/securities/src/main/resources/service.sh stop
+ExecReload = /home/pi/repos/securities/src/main/resources/service.sh reload
+
+[Install]
+WantedBy=multi-user.target
